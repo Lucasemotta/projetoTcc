@@ -105,3 +105,45 @@ h1 {
     background: #e63e0b;
     color: white;
 }
+
+
+.area-horarios {
+    margin-top: 20px; 
+} 
+
+#horarios {
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr);  
+    gap: 8px; 
+    margin-top: 10px; 
+}
+
+.horario{ 
+
+    background-color: white;
+    color: black;
+    border: 1px solid #aaa; 
+    padding: 10px; 
+    coursor: pointer; 
+    margin: 0; 
+
+}
+
+.horario:hover {
+    background-color: rgb(  194, 61, 0);  
+    color: white; 
+}
+
+.horario.selecionado {
+    background-color: rgb(  194, 61, 0);  
+    color: white; 
+}
+
+.area-horarios{ 
+    display: none; 
+} 
+
+.area-horarios{
+    display: none;
+    margin-top: 20px; 
+ }
