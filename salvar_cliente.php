@@ -1,61 +1,32 @@
 <?php
- 
-session_start();
- 
-include "conexao.php";
- 
-$nome = $_POST['nome'];
 
+session_start();
+
+include "conexao.php";
+
+$nome = $_POST['nome'];
 $telefone = $_POST['telefone'];
 
-$email = $_POST['email'];
- 
- 
-$sql = "
+$sql = "INSERT INTO clientes (nome, telefone)
+        VALUES (?, ?)";
 
-    INSERT INTO clientes
-
-    (nome, telefone, email)
-
-    VALUES (?, ?, ?)
-
-";
- 
- 
 $stmt = $conn->prepare($sql);
- 
- 
-$stmt->bind_param(
 
-    "sss",
+$stmt->bind_param("ss", $nome, $telefone);
 
-    $nome,
-
-    $telefone,
-
-    $email
-
-);
- 
- 
 if ($stmt->execute()) {
- 
-    // Guarda o ID do cliente que acabou de ser cadastrado
 
+    // Guarda o ID do cliente para usar no agendamento
     $_SESSION['id_cliente'] = $conn->insert_id;
- 
-    // Depois do cadastro, vai para a agenda
 
+    // Redireciona para a agenda
     header("Location: agenda.php");
-
     exit;
- 
+
 } else {
- 
+
     echo "Erro ao cadastrar cliente: " . $conn->error;
- 
+
 }
- 
+
 ?>
- 
- 
