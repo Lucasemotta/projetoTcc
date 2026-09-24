@@ -1,46 +1,64 @@
 <?php
 
-// Dados do MySQL
 $servidor = "localhost";
 $usuario = "root";
 $senha = "";
 
+/*
+|--------------------------------------------------------------------------
+| Conexão inicial com o MySQL
+|--------------------------------------------------------------------------
+*/
 
-// Criando conexão inicial sem banco
-$conexao = mysqli_connect(
+$conn = new mysqli(
     $servidor,
     $usuario,
     $senha
 );
 
-
-if (!$conexao) {
-
-    die("Erro ao conectar no MySQL: " . mysqli_connect_error());
-
+if ($conn->connect_error) {
+    die("Erro na conexão com o MySQL: " . $conn->connect_error);
 }
 
 
-// Criar banco caso não exista
+/*
+|--------------------------------------------------------------------------
+| Criar banco caso não exista
+|--------------------------------------------------------------------------
+*/
 
 $sqlBanco = "CREATE DATABASE IF NOT EXISTS cortai";
 
-mysqli_query($conexao, $sqlBanco);
+if (!$conn->query($sqlBanco)) {
+    die("Erro ao criar o banco: " . $conn->error);
+}
 
 
-// Selecionar banco
+/*
+|--------------------------------------------------------------------------
+| Selecionar banco
+|--------------------------------------------------------------------------
+*/
 
-mysqli_select_db($conexao, "cortai");
-
-
-
-// =============================
-// CRIAÇÃO DAS TABELAS
-// =============================
+$conn->select_db("cortai");
 
 
+/*
+|--------------------------------------------------------------------------
+| Configuração de caracteres
+|--------------------------------------------------------------------------
+*/
 
-$sqlClientes = "
+$conn->set_charset("utf8mb4");
+
+
+/*
+|--------------------------------------------------------------------------
+| Criar tabela clientes
+|--------------------------------------------------------------------------
+*/
+
+$conn->query("
 
 CREATE TABLE IF NOT EXISTS clientes (
 
@@ -56,15 +74,16 @@ CREATE TABLE IF NOT EXISTS clientes (
 
 )
 
-";
-
-mysqli_query($conexao, $sqlClientes);
+");
 
 
+/*
+|--------------------------------------------------------------------------
+| Criar tabela barbeiros
+|--------------------------------------------------------------------------
+*/
 
-
-
-$sqlBarbeiros = "
+$conn->query("
 
 CREATE TABLE IF NOT EXISTS barbeiros (
 
@@ -80,15 +99,16 @@ CREATE TABLE IF NOT EXISTS barbeiros (
 
 )
 
-";
-
-mysqli_query($conexao, $sqlBarbeiros);
+");
 
 
+/*
+|--------------------------------------------------------------------------
+| Criar tabela servicos
+|--------------------------------------------------------------------------
+*/
 
-
-
-$sqlServicos = "
+$conn->query("
 
 CREATE TABLE IF NOT EXISTS servicos (
 
@@ -104,15 +124,16 @@ CREATE TABLE IF NOT EXISTS servicos (
 
 )
 
-";
-
-mysqli_query($conexao, $sqlServicos);
+");
 
 
+/*
+|--------------------------------------------------------------------------
+| Criar tabela usuarios
+|--------------------------------------------------------------------------
+*/
 
-
-
-$sqlUsuarios = "
+$conn->query("
 
 CREATE TABLE IF NOT EXISTS usuarios (
 
@@ -126,15 +147,16 @@ CREATE TABLE IF NOT EXISTS usuarios (
 
 )
 
-";
-
-mysqli_query($conexao, $sqlUsuarios);
+");
 
 
+/*
+|--------------------------------------------------------------------------
+| Criar tabela agendamentos
+|--------------------------------------------------------------------------
+*/
 
-
-
-$sqlAgendamentos = "
+$conn->query("
 
 CREATE TABLE IF NOT EXISTS agendamentos (
 
@@ -152,33 +174,17 @@ CREATE TABLE IF NOT EXISTS agendamentos (
 
     status VARCHAR(30) DEFAULT 'Agendado',
 
-
     FOREIGN KEY (id_cliente)
-
-    REFERENCES clientes(id_cliente),
-
+        REFERENCES clientes(id_cliente),
 
     FOREIGN KEY (id_barbeiro)
-
-    REFERENCES barbeiros(id_barbeiro),
-
+        REFERENCES barbeiros(id_barbeiro),
 
     FOREIGN KEY (id_servico)
-
-    REFERENCES servicos(id_servico)
+        REFERENCES servicos(id_servico)
 
 )
 
-";
-
-mysqli_query($conexao, $sqlAgendamentos);
-
-
-
-// Configuração de caracteres
-
-mysqli_set_charset($conexao, "utf8");
-
-
+");
 
 ?>

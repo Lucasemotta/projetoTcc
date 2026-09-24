@@ -1,73 +1,61 @@
 <?php
-
-// Conexão com o banco
+ 
+session_start();
+ 
 include "conexao.php";
-
-
-// Recebendo os dados do formulário
-
+ 
 $nome = $_POST['nome'];
 
 $telefone = $_POST['telefone'];
 
 $email = $_POST['email'];
+ 
+ 
+$sql = "
 
+    INSERT INTO clientes
 
+    (nome, telefone, email)
 
-// Inserindo no banco
+    VALUES (?, ?, ?)
 
-$sql = "INSERT INTO clientes
-(
-    nome,
-    telefone,
-    email
-)
+";
+ 
+ 
+$stmt = $conn->prepare($sql);
+ 
+ 
+$stmt->bind_param(
 
-VALUES
-(
-    '$nome',
-    '$telefone',
-    '$email'
-)";
+    "sss",
 
+    $nome,
 
+    $telefone,
 
-$resultado = mysqli_query($conexao, $sql);
+    $email
 
+);
+ 
+ 
+if ($stmt->execute()) {
+ 
+    // Guarda o ID do cliente que acabou de ser cadastrado
 
+    $_SESSION['id_cliente'] = $conn->insert_id;
+ 
+    // Depois do cadastro, vai para a agenda
 
-// Verificando se salvou
+    header("Location: agenda.php");
 
-if($resultado){
-
-    echo "
-
-    <script>
-
-        alert('Cliente cadastrado com sucesso!');
-
-        window.location.href='clientes.php';
-
-    </script>
-
-    ";
-
+    exit;
+ 
+} else {
+ 
+    echo "Erro ao cadastrar cliente: " . $conn->error;
+ 
 }
-else{
-
-    echo "
-
-    <script>
-
-        alert('Erro ao cadastrar cliente!');
-
-        window.history.back();
-
-    </script>
-
-    ";
-
-}
-
-
+ 
 ?>
+ 
+ 
