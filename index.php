@@ -267,22 +267,9 @@
 
             <ul class="navbar-nav ms-auto">
 
-                <li class="nav-item">
-                    <a class="nav-link" href="#">
-                        Início
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="#">
-                        Serviços
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="#">
-                        Contato
-                    </a>
+                <a class="nav-link" href="#">Início</a>
+                <a class="nav-link" href="#">Serviços</a>
+                <a class="nav-link" href="#">Contato</a>
                 </li>
 
             </ul>
@@ -387,8 +374,15 @@
 
                     </p>
 
+                <button
+                    type="submit"
+                    class="btn btn-cortai">
 
-                    <form action="cadastro.php" method="POST">
+                    ENTRAR
+
+                    <i class="bi bi-arrow-right ms-2"></i>
+
+                </button>
 
 
                         <!-- NOME -->

@@ -4,7 +4,7 @@ include "conexao.php";
 
 $sql = "SELECT * FROM clientes ORDER BY id_cliente DESC";
 
-$resultado = mysqli_query($conexao, $sql);
+$resultado = mysqli_query($conn, $sql);
 
 ?>
 
