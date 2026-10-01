@@ -194,7 +194,7 @@ placeholder="Digite seu e-mail">
 
 <button 
 type="submit"
-class="btn btn-cortai">
+class="btn btn-cortai" >
 
 CADASTRAR
 
