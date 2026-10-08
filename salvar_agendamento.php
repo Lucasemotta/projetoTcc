@@ -1,127 +1,54 @@
 <?php
-
 session_start();
-
 include "conexao.php";
 
-
-if (!isset($_SESSION['id_cliente'])) {
-
-    header("Location: cadastro_cliente.php");
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    header("Location: agenda.php");
     exit;
-
 }
 
+$id_cliente = $_SESSION['id_cliente'] ?? null;
+$id_servico = $_POST['id_servico'] ?? null;
+$id_barbeiro = $_POST['id_barbeiro'] ?? null;
+$data_agendamento = $_POST['data_agendamento'] ?? null;
+$horario = $_POST['horario'] ?? null;
 
-$id_cliente = $_SESSION['id_cliente'];
+if (!$id_cliente || !$id_servico || !$id_barbeiro || !$data_agendamento || !$horario) {
+    echo "<script>
+        alert('Por favor, preencha todos os campos do agendamento.');
+        window.location.href = 'agenda.php';
+    </script>";
+    exit;
+}
 
-$id_servico = $_POST['id_servico'];
-
-$id_barbeiro = $_POST['id_barbeiro'];
-
-$data_agendamento = $_POST['data_agendamento'];
-
-$horario = $_POST['horario'];
-
-
-/*
-|--------------------------------------------------------------------------
-| Verificar se o horário já está ocupado
-|--------------------------------------------------------------------------
-*/
-
-$sqlVerifica = "
-
-SELECT id_agendamento
-
-FROM agendamentos
-
-WHERE id_barbeiro = ?
-
-AND data_agendamento = ?
-
-AND horario = ?
-
-AND status = 'Agendado'
-
-";
-
-
+// Verifica se o barbeiro já possui agendamento no mesmo dia e horário
+$sqlVerifica = "SELECT id_agendamento FROM agendamentos 
+                WHERE id_barbeiro = ? AND data_agendamento = ? AND horario = ? AND status != 'Cancelado' 
+                LIMIT 1";
 $stmtVerifica = $conn->prepare($sqlVerifica);
-
-$stmtVerifica->bind_param(
-    "iss",
-    $id_barbeiro,
-    $data_agendamento,
-    $horario
-);
-
+$stmtVerifica->bind_param("iss", $id_barbeiro, $data_agendamento, $horario);
 $stmtVerifica->execute();
+$resVerifica = $stmtVerifica->get_result();
 
-$resultado = $stmtVerifica->get_result();
-
-
-if ($resultado->num_rows > 0) {
-
-    echo "
-
-    <script>
-
-    alert('Esse horário já está ocupado para este barbeiro.');
-
-    window.location.href = 'agenda.php';
-
-    </script>
-
-    ";
-
+if ($resVerifica->num_rows > 0) {
+    echo "<script>
+        alert('Este horário já está ocupado para o barbeiro selecionado. Por favor, escolha outro horário ou barbeiro.');
+        window.location.href = 'agenda.php';
+    </script>";
     exit;
-
 }
 
+// Salva o novo agendamento
+$sqlSalvar = "INSERT INTO agendamentos (id_cliente, id_barbeiro, id_servico, data_agendamento, horario, status) 
+              VALUES (?, ?, ?, ?, ?, 'Agendado')";
+$stmtSalvar = $conn->prepare($sqlSalvar);
+$stmtSalvar->bind_param("iiiss", $id_cliente, $id_barbeiro, $id_servico, $data_agendamento, $horario);
 
-/*
-|--------------------------------------------------------------------------
-| Salvar agendamento
-|--------------------------------------------------------------------------
-*/
-
-$sql = "
-
-INSERT INTO agendamentos
-
-(id_cliente, id_barbeiro, id_servico, data_agendamento, horario)
-
-VALUES (?, ?, ?, ?, ?)
-
-";
-
-
-$stmt = $conn->prepare($sql);
-
-
-$stmt->bind_param(
-    "iiiss",
-    $id_cliente,
-    $id_barbeiro,
-    $id_servico,
-    $data_agendamento,
-    $horario
-);
-
-
-if ($stmt->execute()) {
-
-    $_SESSION['id_agendamento'] = $conn->insert_id;
-
-    header("Location: resumo.php");
-
+if ($stmtSalvar->execute()) {
+    $id_agendamento = $conn->insert_id;
+    header("Location: resumo.php?id=" . $id_agendamento);
     exit;
-
 } else {
-
-    echo "Erro ao realizar agendamento: " . $conn->error;
-
+    die("Erro ao salvar agendamento: " . $stmtSalvar->error);
 }
-
 ?>

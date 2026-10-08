@@ -1,23 +1,18 @@
 <?php
-
 session_start();
-
 include "conexao.php";
 
-// Verifica se os dados foram enviados
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     header("Location: index.php");
     exit;
 }
 
-// Recebe os dados
 $nome = trim($_POST['nome'] ?? '');
 $telefone = trim($_POST['telefone'] ?? '');
 
-// Validação
-if ($nome === '' || $telefone === '') {
+if (empty($nome) || empty($telefone)) {
     echo "<script>
-        alert('Preencha seu nome e telefone.');
+        alert('Por favor, preencha todos os campos.');
         window.location.href = 'index.php';
     </script>";
     exit;
@@ -25,48 +20,29 @@ if ($nome === '' || $telefone === '') {
 
 // Verifica se o cliente já existe pelo telefone
 $sqlBusca = "SELECT id_cliente FROM clientes WHERE telefone = ? LIMIT 1";
-
 $stmtBusca = $conn->prepare($sqlBusca);
 $stmtBusca->bind_param("s", $telefone);
 $stmtBusca->execute();
+$resBusca = $stmtBusca->get_result();
 
-$resultado = $stmtBusca->get_result();
-
-if ($resultado->num_rows > 0) {
-
-    // Cliente já existe
-    $cliente = $resultado->fetch_assoc();
-
-    $id_cliente = $cliente['id_cliente'];
-
-    // Atualiza o nome caso tenha sido alterado
-    $sqlAtualiza = "UPDATE clientes SET nome = ? WHERE id_cliente = ?";
-
-    $stmtAtualiza = $conn->prepare($sqlAtualiza);
-    $stmtAtualiza->bind_param("si", $nome, $id_cliente);
-    $stmtAtualiza->execute();
-
+if ($resBusca->num_rows > 0) {
+    // Cliente já existe, pega o ID dele
+    $cliente = $resBusca->fetch_assoc();
+    $_SESSION['id_cliente'] = $cliente['id_cliente'];
 } else {
-
     // Cadastra novo cliente
-    $sqlCadastro = "
-        INSERT INTO clientes (nome, telefone)
-        VALUES (?, ?)
-    ";
-
-    $stmtCadastro = $conn->prepare($sqlCadastro);
-    $stmtCadastro->bind_param("ss", $nome, $telefone);
-
-    if (!$stmtCadastro->execute()) {
-        die("Erro ao cadastrar cliente: " . $stmtCadastro->error);
+    $sqlInsert = "INSERT INTO clientes (nome, telefone) VALUES (?, ?)";
+    $stmtInsert = $conn->prepare($sqlInsert);
+    $stmtInsert->bind_param("ss", $nome, $telefone);
+    
+    if ($stmtInsert->execute()) {
+        $_SESSION['id_cliente'] = $conn->insert_id;
+    } else {
+        die("Erro ao cadastrar cliente: " . $stmtInsert->error);
     }
-
-    $id_cliente = $conn->insert_id;
 }
 
-// Guarda o cliente na sessão
-$_SESSION['id_cliente'] = $id_cliente;
-
-// Vai para a tela de agendamento
+// Redireciona para a página de agendamento
 header("Location: agenda.php");
 exit;
+?>
