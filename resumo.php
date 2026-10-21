@@ -39,23 +39,115 @@ $horarioFormatado = date('H:i', strtotime($dados['horario']));
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cortaí - Confirmação do Agendamento</title>
+    
+    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Fonte Montserrat -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        body { background-color: #111516; color: white; font-family: Arial, sans-serif; }
-        .container { margin-top: 60px; margin-bottom: 60px; }
-        .card-resumo { background-color: #191e1f; border: 1px solid #303a3b; border-radius: 15px; padding: 40px; box-shadow: 0 15px 35px rgba(0,0,0,0.4); }
-        .icone-sucesso { font-size: 60px; color: #28a745; text-align: center; margin-bottom: 15px; }
-        .titulo { text-align: center; margin-bottom: 10px; font-weight: 700; }
-        .subtitulo { text-align: center; color: #8f9997; margin-bottom: 30px; }
-        .info-box { background-color: #111516; border: 1px solid #293436; border-radius: 10px; padding: 20px; margin-bottom: 25px; }
-        .info-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #222a2b; }
-        .info-item:last-child { border-bottom: none; }
-        .label { color: #8f9997; }
-        .valor { font-weight: 600; color: #ffffff; }
-        .destaque-valor { color: #719999; font-size: 18px; }
-        .btn-inicio { background-color: #719999; color: #111516; font-weight: bold; width: 100%; padding: 12px; border: none; border-radius: 6px; }
-        .btn-inicio:hover { background-color: #86aaaa; color: #111516; }
+        body { 
+            background-color: #111516; 
+            color: white; 
+            font-family: 'Montserrat', Arial, sans-serif; 
+        }
+        .container { 
+            margin-top: 50px; 
+            margin-bottom: 50px; 
+        }
+        .card-resumo { 
+            background-color: #191e1f; 
+            border: 1px solid #303a3b; 
+            border-radius: 15px; 
+            padding: 40px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4); 
+        }
+        .icone-sucesso { 
+            font-size: 60px; 
+            color: #198754; 
+            text-align: center; 
+            margin-bottom: 15px; 
+        }
+        .titulo { 
+            text-align: center; 
+            margin-bottom: 10px; 
+            font-weight: 700; 
+        }
+        .subtitulo { 
+            text-align: center; 
+            color: #8f9997; 
+            margin-bottom: 30px; 
+            font-size: 14px;
+        }
+        .info-box { 
+            background-color: #111516; 
+            border: 1px solid #293436; 
+            border-radius: 10px; 
+            padding: 20px; 
+            margin-bottom: 25px; 
+        }
+        .info-item { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 10px 0; 
+            border-bottom: 1px solid #222a2b; 
+        }
+        .info-item:last-child { 
+            border-bottom: none; 
+        }
+        .label { 
+            color: #8f9997; 
+        }
+        .valor { 
+            font-weight: 600; 
+            color: #ffffff; 
+        }
+        .destaque-valor { 
+            color: #719999; 
+            font-size: 18px; 
+        }
+        .btn-inicio { 
+            background-color: #719999; 
+            color: #111516; 
+            font-weight: bold; 
+            width: 100%; 
+            padding: 12px; 
+            border: none; 
+            border-radius: 6px; 
+            transition: 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .btn-inicio:hover { 
+            background-color: #86aaaa; 
+            color: #111516; 
+        }
+        .btn-imprimir {
+            background-color: transparent;
+            border: 1px solid #3b4547;
+            color: #8f9997;
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+        .btn-imprimir:hover {
+            color: #ffffff;
+            border-color: #719999;
+        }
+
+        @media print {
+            body { background-color: #fff; color: #000; }
+            .card-resumo { border: none; box-shadow: none; padding: 0; }
+            .btn-inicio, .btn-imprimir { display: none; }
+            .info-box { border: 1px solid #ccc; background-color: #fff; }
+            .valor { color: #000; }
+            .destaque-valor { color: #000; }
+        }
     </style>
 </head>
 <body>
@@ -89,11 +181,11 @@ $horarioFormatado = date('H:i', strtotime($dados['horario']));
                     </div>
                     <div class="info-item">
                         <span class="label">Data:</span>
-                        <span class="valor"><?= $dataFormatada; ?></span>
+                        <span class="valor"><i class="bi bi-calendar-event me-1"></i><?= $dataFormatada; ?></span>
                     </div>
                     <div class="info-item">
                         <span class="label">Horário:</span>
-                        <span class="valor"><?= $horarioFormatado; ?> (<?= $dados['duracao']; ?> min)</span>
+                        <span class="valor"><i class="bi bi-clock me-1"></i><?= $horarioFormatado; ?> (<?= htmlspecialchars($dados['duracao'] ?? 30); ?> min)</span>
                     </div>
                     <div class="info-item">
                         <span class="label">Valor Total:</span>
@@ -101,11 +193,13 @@ $horarioFormatado = date('H:i', strtotime($dados['horario']));
                     </div>
                 </div>
 
-                <a href="index.php" class="btn btn-inicio">VOLTAR À PÁGINA INICIAL</a>
+                <a href="index.php" class="btn btn-inicio"><i class="bi bi-house-door-fill me-1"></i> VOLTAR À PÁGINA INICIAL</a>
+                <button onclick="window.print()" class="btn btn-imprimir"><i class="bi bi-printer me-1"></i> Imprimir Comprovante</button>
             </div>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

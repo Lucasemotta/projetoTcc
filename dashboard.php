@@ -2,6 +2,7 @@
 session_start();
 include "conexao.php";
 
+// Redireciona se a sessão do usuário não estiver ativa
 if (!isset($_SESSION['usuario_id'])) {
     header("Location: login.php");
     exit;
@@ -23,6 +24,9 @@ $stmt = $conn->prepare($sql);
 $stmt->bind_param("s", $dataFiltro);
 $stmt->execute();
 $agendamentos = $stmt->get_result();
+
+// Variável para somar o faturamento do dia
+$totalFaturamento = 0;
 ?>
 
 <!DOCTYPE html>
@@ -31,41 +35,137 @@ $agendamentos = $stmt->get_result();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cortaí - Dashboard Administrativo</title>
+
+    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Fonte Montserrat -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        body { background-color: #111516; color: white; font-family: Arial, sans-serif; }
-        .navbar-admin { background-color: #191e1f; border-bottom: 1px solid #303a3b; }
-        .container { margin-top: 40px; }
-        .card-panel { background-color: #191e1f; border: 1px solid #303a3b; border-radius: 12px; padding: 30px; }
-        .titulo span { color: #719999; }
-        .table { color: white; }
-        .table thead { background-color: #719999; color: #111516; }
-        .form-control { background-color: #111516; border: 1px solid #3b4547; color: white; width: auto; display: inline-block; }
-        .btn-cortai { background-color: #719999; color: #111516; font-weight: bold; border: none; }
-        .btn-cortai:hover { background-color: #86aaaa; }
+        body {
+            background-color: #111516;
+            color: white;
+            font-family: 'Montserrat', Arial, sans-serif;
+        }
+
+        .navbar-admin {
+            background-color: #191e1f;
+            border-bottom: 1px solid #303a3b;
+            padding: 15px 30px;
+        }
+
+        .navbar-brand {
+            color: #719999 !important;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .container {
+            margin-top: 40px;
+            margin-bottom: 40px;
+        }
+
+        .card-panel {
+            background-color: #191e1f;
+            border: 1px solid #303a3b;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        }
+
+        .titulo span {
+            color: #719999;
+        }
+
+        .card-resumo-valor {
+            background-color: #111516;
+            border: 1px solid #3b4547;
+            border-radius: 8px;
+            padding: 15px 20px;
+            display: inline-block;
+        }
+
+        .card-resumo-valor span {
+            color: #719999;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .table {
+            color: #ffffff;
+            border-color: #303a3b;
+        }
+
+        .table thead {
+            background-color: #719999;
+            color: #111516;
+        }
+
+        .table thead th {
+            border: none;
+            padding: 12px;
+        }
+
+        .table tbody td {
+            padding: 14px 12px;
+            border-color: #293436;
+        }
+
+        .form-control {
+            background-color: #111516;
+            border: 1px solid #3b4547;
+            color: white;
+            padding: 8px 12px;
+        }
+
+        .form-control:focus {
+            background-color: #111516;
+            color: white;
+            border-color: #719999;
+            box-shadow: none;
+        }
+
+        .btn-outline-light {
+            border-color: #3b4547;
+            color: #c8cecc;
+        }
+
+        .btn-outline-light:hover {
+            background-color: #719999;
+            border-color: #719999;
+            color: #111516;
+        }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark navbar-admin px-4">
-    <a class="navbar-brand font-weight-bold" href="dashboard.php" style="color: #719999; font-weight: bold;">CORTAÍ ADMIN</a>
-    <div class="ms-auto">
-        <a href="servicos.php" class="btn btn-outline-light btn-sm me-2">Serviços</a>
-        <a href="barbeiros.php" class="btn btn-outline-light btn-sm me-2">Barbeiros</a>
-        <a href="logout.php" class="btn btn-danger btn-sm">Sair</a>
+<nav class="navbar navbar-expand-lg navbar-dark navbar-admin">
+    <a class="navbar-brand" href="dashboard.php">CORTAÍ ADMIN</a>
+    <div class="ms-auto d-flex gap-2">
+        <a href="servicos.php" class="btn btn-outline-light btn-sm"><i class="bi bi-scissors me-1"></i>Serviços</a>
+        <a href="barbeiros.php" class="btn btn-outline-light btn-sm"><i class="bi bi-person-badge me-1"></i>Barbeiros</a>
+        <a href="logout.php" class="btn btn-danger btn-sm"><i class="bi bi-box-arrow-right me-1"></i>Sair</a>
     </div>
 </nav>
 
 <div class="container">
     <div class="card-panel mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="titulo m-0">Agendamentos do <span>Dia</span></h2>
+        
+        <!-- Cabeçalho do Card com Filtro de Data -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h2 class="titulo m-0">Agendamentos do <span>Dia</span></h2>
+            </div>
+
             <form method="GET" action="dashboard.php" class="d-flex align-items-center gap-2">
-                <label>Data:</label>
-                <input type="date" name="data" class="form-control" value="<?= $dataFiltro; ?>" onchange="this.form.submit()">
+                <label class="mb-0 text-muted" style="font-size: 14px;">Filtrar Data:</label>
+                <input type="date" name="data" class="form-control" value="<?= htmlspecialchars($dataFiltro); ?>" onchange="this.form.submit()">
             </form>
         </div>
 
+        <!-- Tabela de Agendamentos -->
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead>
@@ -82,26 +182,44 @@ $agendamentos = $stmt->get_result();
                 <tbody>
                     <?php if ($agendamentos && $agendamentos->num_rows > 0): ?>
                         <?php while ($row = $agendamentos->fetch_assoc()): ?>
+                            <?php $totalFaturamento += $row['valor']; ?>
                             <tr>
-                                <td><strong><?= date('H:i', strtotime($row['horario'])); ?></strong></td>
+                                <td><strong><i class="bi bi-clock me-1 text-muted"></i><?= date('H:i', strtotime($row['horario'])); ?></strong></td>
                                 <td><?= htmlspecialchars($row['cliente_nome']); ?></td>
                                 <td><?= htmlspecialchars($row['cliente_telefone']); ?></td>
                                 <td><?= htmlspecialchars($row['servico_nome']); ?></td>
                                 <td><?= htmlspecialchars($row['barbeiro_nome']); ?></td>
                                 <td>R$ <?= number_format($row['valor'], 2, ',', '.'); ?></td>
-                                <td><span class="badge bg-info text-dark"><?= $row['status']; ?></span></td>
+                                <td>
+                                    <?php 
+                                        $statusClass = 'bg-info text-dark';
+                                        if ($row['status'] === 'Concluído') $statusClass = 'bg-success';
+                                        if ($row['status'] === 'Cancelado') $statusClass = 'bg-danger';
+                                    ?>
+                                    <span class="badge <?= $statusClass; ?>"><?= htmlspecialchars($row['status']); ?></span>
+                                </td>
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" class="text-center">Nenhum agendamento encontrado para esta data.</td>
+                            <td colspan="7" class="text-center py-4 text-muted">Nenhum agendamento encontrado para esta data.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
+
+        <!-- Faturamento Total Previsto do Dia -->
+        <div class="mt-4 text-end">
+            <div class="card-resumo-valor">
+                Total Previsto: <span>R$ <?= number_format($totalFaturamento, 2, ',', '.'); ?></span>
+            </div>
+        </div>
+
     </div>
 </div>
 
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

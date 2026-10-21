@@ -1,5 +1,12 @@
 <?php
+session_start();
 include "conexao.php";
+
+// Garante que apenas usuários logados acessem a lista
+if (!isset($_SESSION['usuario_id'])) {
+    header("Location: login.php");
+    exit;
+}
 
 $sql = "SELECT * FROM servicos ORDER BY nome ASC";
 $resultado = $conn->query($sql);
@@ -11,28 +18,121 @@ $resultado = $conn->query($sql);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cortaí - Serviços</title>
+
+    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Fonte Montserrat -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        body { background-color: #111516; color: #f5f5f5; font-family: Arial, sans-serif; }
-        .container { margin-top: 50px; }
-        .card-servicos { background-color: #191e1f; border: 1px solid #303a3b; border-radius: 12px; padding: 30px; }
-        .titulo span { color: #719999; }
-        .table { color: white; }
-        .table thead { background-color: #719999; color: #111516; }
-        .btn-cortai { background-color: #719999; border: none; color: #111516; font-weight: bold; }
-        .btn-cortai:hover { background-color: #86aaaa; }
-        .modal-content { background-color: #191e1f; color: white; border: 1px solid #303a3b; }
-        .form-control { background-color: #111516; border: 1px solid #3b4547; color: white; }
-        .form-control:focus { background-color: #111516; color: white; border-color: #719999; box-shadow: none; }
+        body { 
+            background-color: #111516; 
+            color: #f5f5f5; 
+            font-family: 'Montserrat', Arial, sans-serif; 
+        }
+
+        .container { 
+            margin-top: 40px; 
+            margin-bottom: 40px;
+        }
+
+        .card-servicos { 
+            background-color: #191e1f; 
+            border: 1px solid #303a3b; 
+            border-radius: 12px; 
+            padding: 30px; 
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        }
+
+        .titulo span { 
+            color: #719999; 
+        }
+
+        .table { 
+            color: white; 
+            border-color: #303a3b;
+        }
+
+        .table thead { 
+            background-color: #719999; 
+            color: #111516; 
+        }
+
+        .table thead th {
+            border: none;
+            padding: 12px;
+        }
+
+        .table tbody td {
+            padding: 14px 12px;
+            border-color: #293436;
+        }
+
+        .btn-cortai { 
+            background-color: #719999; 
+            border: none; 
+            color: #111516; 
+            font-weight: bold; 
+            padding: 10px 20px;
+            border-radius: 6px;
+            transition: 0.3s;
+        }
+
+        .btn-cortai:hover { 
+            background-color: #86aaaa; 
+            color: #111516;
+        }
+
+        .btn-voltar {
+            color: #8f9997;
+            border-color: #3b4547;
+            text-decoration: none;
+        }
+
+        .btn-voltar:hover {
+            color: #719999;
+            background-color: #191e1f;
+            border-color: #719999;
+        }
+
+        .modal-content { 
+            background-color: #191e1f; 
+            color: white; 
+            border: 1px solid #303a3b; 
+        }
+
+        .form-control { 
+            background-color: #111516; 
+            border: 1px solid #3b4547; 
+            color: white; 
+            padding: 10px;
+        }
+
+        .form-control:focus { 
+            background-color: #111516; 
+            color: white; 
+            border-color: #719999; 
+            box-shadow: none; 
+        }
     </style>
 </head>
 <body>
 
+<div class="container mb-3">
+    <a href="dashboard.php" class="btn btn-voltar btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Voltar ao Dashboard
+    </a>
+</div>
+
 <div class="container">
     <div class="card-servicos">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="titulo m-0">Lista de <span>Serviços</span></h1>
-            <button class="btn btn-cortai" data-bs-toggle="modal" data-bs-target="#modalServico">+ Novo Serviço</button>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <h2 class="titulo m-0">Lista de <span>Serviços</span></h2>
+            <button class="btn btn-cortai" data-bs-toggle="modal" data-bs-target="#modalServico">
+                <i class="bi bi-plus-circle me-1"></i> Novo Serviço
+            </button>
         </div>
 
         <div class="table-responsive">
@@ -50,16 +150,16 @@ $resultado = $conn->query($sql);
                     <?php if ($resultado && $resultado->num_rows > 0): ?>
                         <?php while ($servico = $resultado->fetch_assoc()): ?>
                             <tr>
-                                <td><?= $servico['id_servico']; ?></td>
+                                <td><strong>#<?= $servico['id_servico']; ?></strong></td>
                                 <td><?= htmlspecialchars($servico['nome']); ?></td>
-                                <td><?= htmlspecialchars($servico['descricao']); ?></td>
+                                <td><?= htmlspecialchars($servico['descricao'] ?? '-'); ?></td>
                                 <td>R$ <?= number_format($servico['valor'], 2, ',', '.'); ?></td>
-                                <td><?= $servico['duracao']; ?> min</td>
+                                <td><?= htmlspecialchars($servico['duracao'] ?? 30); ?> min</td>
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="5" class="text-center">Nenhum serviço cadastrado.</td>
+                            <td colspan="5" class="text-center py-4 text-muted">Nenhum serviço cadastrado até o momento.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -69,12 +169,12 @@ $resultado = $conn->query($sql);
 </div>
 
 <!-- Modal para Novo Serviço -->
-<div class="modal fade" id="modalServico" tabindex="-1">
+<div class="modal fade" id="modalServico" tabindex="-1" aria-labelledby="modalServicoLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Cadastrar Novo Serviço</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="modalServicoLabel"><i class="bi bi-scissors me-2"></i>Cadastrar Novo Serviço</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form action="salvar_servico.php" method="POST">
           <div class="modal-body">
@@ -95,7 +195,8 @@ $resultado = $conn->query($sql);
                   <input type="number" name="duracao" class="form-control" required placeholder="30">
               </div>
           </div>
-          <div class="modal-footer">
+          <div class="modal-footer border-secondary">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
               <button type="submit" class="btn btn-cortai">Salvar Serviço</button>
           </div>
       </form>
@@ -103,6 +204,7 @@ $resultado = $conn->query($sql);
   </div>
 </div>
 
+<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
