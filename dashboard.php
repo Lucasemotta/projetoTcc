@@ -2,13 +2,39 @@
 session_start();
 include "conexao.php";
 
-// Redireciona se a sessão do usuário não estiver ativa
+// Redireciona para a página inicial caso a sessão do usuário não esteja ativa
 if (!isset($_SESSION['usuario_id'])) {
-    header("Location: login.php");
+    header("Location: index.php");
     exit;
 }
 
 $dataFiltro = $_GET['data'] ?? date('Y-m-d');
+
+// Lógica para atualizar status ou excluir agendamento
+if (isset($_GET['acao']) && isset($_GET['id'])) {
+    $id_agendamento = intval($_GET['id']);
+    $acao = $_GET['acao'];
+
+    if ($acao === 'concluir') {
+        $stmtUp = $conn->prepare("UPDATE agendamentos SET status = 'Concluído' WHERE id_agendamento = ?");
+        $stmtUp->bind_param("i", $id_agendamento);
+        $stmtUp->execute();
+        $stmtUp->close();
+    } elseif ($acao === 'cancelar') {
+        $stmtUp = $conn->prepare("UPDATE agendamentos SET status = 'Cancelado' WHERE id_agendamento = ?");
+        $stmtUp->bind_param("i", $id_agendamento);
+        $stmtUp->execute();
+        $stmtUp->close();
+    } elseif ($acao === 'excluir') {
+        $stmtDel = $conn->prepare("DELETE FROM agendamentos WHERE id_agendamento = ?");
+        $stmtDel->bind_param("i", $id_agendamento);
+        $stmtDel->execute();
+        $stmtDel->close();
+    }
+
+    header("Location: dashboard.php?data=" . $dataFiltro);
+    exit;
+}
 
 // Consulta todos os agendamentos da data selecionada
 $sql = "SELECT a.*, c.nome AS cliente_nome, c.telefone AS cliente_telefone,
@@ -177,12 +203,17 @@ $totalFaturamento = 0;
                         <th>Barbeiro</th>
                         <th>Valor</th>
                         <th>Status</th>
+                        <th class="text-center">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if ($agendamentos && $agendamentos->num_rows > 0): ?>
                         <?php while ($row = $agendamentos->fetch_assoc()): ?>
-                            <?php $totalFaturamento += $row['valor']; ?>
+                            <?php 
+                                if ($row['status'] !== 'Cancelado') {
+                                    $totalFaturamento += $row['valor']; 
+                                }
+                            ?>
                             <tr>
                                 <td><strong><i class="bi bi-clock me-1 text-muted"></i><?= date('H:i', strtotime($row['horario'])); ?></strong></td>
                                 <td><?= htmlspecialchars($row['cliente_nome']); ?></td>
@@ -198,11 +229,18 @@ $totalFaturamento = 0;
                                     ?>
                                     <span class="badge <?= $statusClass; ?>"><?= htmlspecialchars($row['status']); ?></span>
                                 </td>
+                                <td class="text-center">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="dashboard.php?data=<?= $dataFiltro; ?>&acao=concluir&id=<?= $row['id_agendamento']; ?>" class="btn btn-outline-success" title="Marcar como Concluído"><i class="bi bi-check-lg"></i></a>
+                                        <a href="dashboard.php?data=<?= $dataFiltro; ?>&acao=cancelar&id=<?= $row['id_agendamento']; ?>" class="btn btn-outline-warning" title="Cancelar Agendamento"><i class="bi bi-x-lg"></i></a>
+                                        <a href="dashboard.php?data=<?= $dataFiltro; ?>&acao=excluir&id=<?= $row['id_agendamento']; ?>" class="btn btn-outline-danger" onclick="return confirm('Excluir este agendamento?');" title="Excluir"><i class="bi bi-trash"></i></a>
+                                    </div>
+                                </td>
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">Nenhum agendamento encontrado para esta data.</td>
+                            <td colspan="8" class="text-center py-4 text-muted">Nenhum agendamento encontrado para esta data.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
