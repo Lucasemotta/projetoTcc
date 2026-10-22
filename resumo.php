@@ -31,6 +31,9 @@ if ($resultado->num_rows === 0) {
 $dados = $resultado->fetch_assoc();
 $dataFormatada = date('d/m/Y', strtotime($dados['data_agendamento']));
 $horarioFormatado = date('H:i', strtotime($dados['horario']));
+
+$stmt->close();
+$conn->close();
 ?>
 
 <!DOCTYPE html>
