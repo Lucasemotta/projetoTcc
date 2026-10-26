@@ -1,10 +1,9 @@
 <?php
-session_start();
-include "conexao.php";
+require "agenda_lib.php";
+require "conexao.php";
 
-$id_agendamento = $_GET['id'] ?? null;
-
-if (!$id_agendamento) {
+$idAgendamento = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+if (!$idAgendamento) {
     header("Location: index.php");
     exit;
 }
@@ -18,191 +17,74 @@ $sql = "SELECT a.*, c.nome AS nome_cliente, c.telefone AS telefone_cliente,
         INNER JOIN servicos s ON a.id_servico = s.id_servico
         WHERE a.id_agendamento = ?
         LIMIT 1";
-
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $id_agendamento);
+$stmt->bind_param("i", $idAgendamento);
 $stmt->execute();
-$resultado = $stmt->get_result();
+$dados = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
-if ($resultado->num_rows === 0) {
-    die("Agendamento não encontrado.");
+// Só o próprio cliente (ou um administrador logado) pode ver o comprovante.
+// Sem isso, qualquer pessoa trocando o número na URL veria nome e telefone de outros clientes.
+$ehAdmin   = !empty($_SESSION['usuario_id']);
+$ehDono    = $dados && !empty($_SESSION['id_cliente']) && (int) $_SESSION['id_cliente'] === (int) $dados['id_cliente'];
+
+if (!$dados || !($ehAdmin || $ehDono)) {
+    http_response_code(404);
+    exit("Agendamento não encontrado.");
 }
 
-$dados = $resultado->fetch_assoc();
-$dataFormatada = date('d/m/Y', strtotime($dados['data_agendamento']));
+$dataFormatada    = date('d/m/Y', strtotime($dados['data_agendamento']));
 $horarioFormatado = date('H:i', strtotime($dados['horario']));
-
-$stmt->close();
-$conn->close();
 ?>
-
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cortaí - Confirmação do Agendamento</title>
-    
-    <!-- Bootstrap -->
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <!-- Fonte Montserrat -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        body { 
-            background-color: #111516; 
-            color: white; 
-            font-family: 'Montserrat', Arial, sans-serif; 
-        }
-        .container { 
-            margin-top: 50px; 
-            margin-bottom: 50px; 
-        }
-        .card-resumo { 
-            background-color: #191e1f; 
-            border: 1px solid #303a3b; 
-            border-radius: 15px; 
-            padding: 40px; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.4); 
-        }
-        .icone-sucesso { 
-            font-size: 60px; 
-            color: #198754; 
-            text-align: center; 
-            margin-bottom: 15px; 
-        }
-        .titulo { 
-            text-align: center; 
-            margin-bottom: 10px; 
-            font-weight: 700; 
-        }
-        .subtitulo { 
-            text-align: center; 
-            color: #8f9997; 
-            margin-bottom: 30px; 
-            font-size: 14px;
-        }
-        .info-box { 
-            background-color: #111516; 
-            border: 1px solid #293436; 
-            border-radius: 10px; 
-            padding: 20px; 
-            margin-bottom: 25px; 
-        }
-        .info-item { 
-            display: flex; 
-            justify-content: space-between; 
-            padding: 10px 0; 
-            border-bottom: 1px solid #222a2b; 
-        }
-        .info-item:last-child { 
-            border-bottom: none; 
-        }
-        .label { 
-            color: #8f9997; 
-        }
-        .valor { 
-            font-weight: 600; 
-            color: #ffffff; 
-        }
-        .destaque-valor { 
-            color: #719999; 
-            font-size: 18px; 
-        }
-        .btn-inicio { 
-            background-color: #719999; 
-            color: #111516; 
-            font-weight: bold; 
-            width: 100%; 
-            padding: 12px; 
-            border: none; 
-            border-radius: 6px; 
-            transition: 0.3s;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-        }
-        .btn-inicio:hover { 
-            background-color: #86aaaa; 
-            color: #111516; 
-        }
-        .btn-imprimir {
-            background-color: transparent;
-            border: 1px solid #3b4547;
-            color: #8f9997;
-            width: 100%;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 10px;
-            transition: 0.3s;
-        }
-        .btn-imprimir:hover {
-            color: #ffffff;
-            border-color: #719999;
-        }
-
-        @media print {
-            body { background-color: #fff; color: #000; }
-            .card-resumo { border: none; box-shadow: none; padding: 0; }
-            .btn-inicio, .btn-imprimir { display: none; }
-            .info-box { border: 1px solid #ccc; background-color: #fff; }
-            .valor { color: #000; }
-            .destaque-valor { color: #000; }
-        }
-    </style>
+    <link rel="stylesheet" href="assets/cortai.css">
 </head>
 <body>
 
-<div class="container">
+<div class="container pagina">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card-resumo">
-                <div class="icone-sucesso">
-                    <i class="bi bi-check-circle-fill"></i>
-                </div>
-                <h2 class="titulo">Agendamento Confirmado!</h2>
-                <p class="subtitulo">Apresente seus dados ao chegar na barbearia.</p>
+        <div class="col-md-8 col-lg-6">
+            <div class="card-cortai">
+
+                <div class="icone-sucesso"><i class="bi bi-check-circle-fill"></i></div>
+                <h2 class="titulo text-center mb-2">Agendamento confirmado!</h2>
+                <p class="subtitulo text-center mb-4">Apresente seus dados ao chegar na barbearia.</p>
 
                 <div class="info-box">
-                    <div class="info-item">
-                        <span class="label">Cliente:</span>
-                        <span class="valor"><?= htmlspecialchars($dados['nome_cliente']); ?></span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">Telefone:</span>
-                        <span class="valor"><?= htmlspecialchars($dados['telefone_cliente']); ?></span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">Serviço:</span>
-                        <span class="valor"><?= htmlspecialchars($dados['nome_servico']); ?></span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">Barbeiro:</span>
-                        <span class="valor"><?= htmlspecialchars($dados['nome_barbeiro']); ?></span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">Data:</span>
-                        <span class="valor"><i class="bi bi-calendar-event me-1"></i><?= $dataFormatada; ?></span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">Horário:</span>
-                        <span class="valor"><i class="bi bi-clock me-1"></i><?= $horarioFormatado; ?> (<?= htmlspecialchars($dados['duracao'] ?? 30); ?> min)</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">Valor Total:</span>
-                        <span class="valor destaque-valor">R$ <?= number_format($dados['valor'], 2, ',', '.'); ?></span>
-                    </div>
+                    <div class="info-item"><span class="label">Cliente</span><span class="valor"><?= htmlspecialchars($dados['nome_cliente']); ?></span></div>
+                    <div class="info-item"><span class="label">Telefone</span><span class="valor"><?= htmlspecialchars($dados['telefone_cliente']); ?></span></div>
+                    <div class="info-item"><span class="label">Serviço</span><span class="valor"><?= htmlspecialchars($dados['nome_servico']); ?></span></div>
+                    <div class="info-item"><span class="label">Barbeiro</span><span class="valor"><?= htmlspecialchars($dados['nome_barbeiro']); ?></span></div>
+                    <div class="info-item"><span class="label">Data</span><span class="valor"><i class="bi bi-calendar-event me-1"></i><?= $dataFormatada; ?></span></div>
+                    <div class="info-item"><span class="label">Horário</span><span class="valor"><i class="bi bi-clock me-1"></i><?= $horarioFormatado; ?> (<?= (int) ($dados['duracao'] ?? 30); ?> min)</span></div>
+                    <div class="info-item"><span class="label">Valor total</span><span class="valor destaque-valor">R$ <?= number_format($dados['valor'], 2, ',', '.'); ?></span></div>
                 </div>
 
-                <a href="index.php" class="btn btn-inicio"><i class="bi bi-house-door-fill me-1"></i> VOLTAR À PÁGINA INICIAL</a>
-                <button onclick="window.print()" class="btn btn-imprimir"><i class="bi bi-printer me-1"></i> Imprimir Comprovante</button>
+                <div class="d-grid gap-2 no-print">
+                    <a href="agenda.php" class="btn btn-cortai d-flex align-items-center justify-content-center">
+                        <i class="bi bi-calendar-plus me-2"></i> AGENDAR OUTRO HORÁRIO
+                    </a>
+                    <button type="button" onclick="window.print()" class="btn btn-cortai-outline">
+                        <i class="bi bi-printer me-1"></i> Imprimir comprovante
+                    </button>
+                    <a href="index.php?trocar=1" class="btn btn-cortai-outline d-flex align-items-center justify-content-center">
+                        <i class="bi bi-box-arrow-right me-1"></i> Sair
+                    </a>
+                </div>
+
             </div>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

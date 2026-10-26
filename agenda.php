@@ -1,201 +1,214 @@
 <?php
-session_start();
-include "conexao.php";
+require "agenda_lib.php";
+require "conexao.php";
 
-// Se o cliente não estiver identificado na sessão, redireciona para o cadastro
-if (!isset($_SESSION['id_cliente'])) {
-    header("Location: cadastro_cliente.php");
-    exit;
-}
-
-// Procura os serviços e barbeiros ativos
-$sqlServicos = "SELECT * FROM servicos ORDER BY nome ASC";
-$resultadoServicos = $conn->query($sqlServicos);
-
-$sqlBarbeiros = "SELECT * FROM barbeiros WHERE status = 1 ORDER BY nome ASC";
-$resultadoBarbeiros = $conn->query($sqlBarbeiros);
+exigir_cliente();
 
 $nomeCliente = $_SESSION['nome_cliente'] ?? 'Cliente';
-?>
+$erro        = agenda_flash();
 
+$servicos = $conn->query("SELECT id_servico, nome, valor, duracao FROM servicos ORDER BY nome ASC");
+?>
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cortaí - Agendamento</title>
-    
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <!-- Fonte Montserrat -->
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <style>
-        body { 
-            background-color: #111516; 
-            color: white; 
-            font-family: 'Montserrat', Arial, sans-serif; 
-        }
-        .container { 
-            margin-top: 50px; 
-            margin-bottom: 50px; 
-        }
-        .card-agenda { 
-            background-color: #191e1f; 
-            border: 1px solid #303a3b; 
-            border-radius: 15px; 
-            padding: 40px; 
-            box-shadow: 0 20px 50px rgba(0,0,0,0.35);
-        }
-        .titulo { 
-            text-align: center; 
-            margin-bottom: 5px; 
-            font-weight: 700;
-        }
-        .titulo span { 
-            color: #719999; 
-        }
-        .boas-vindas {
-            text-align: center;
-            color: #8f9997;
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
-        .form-label { 
-            color: #ddd; 
-            font-size: 14px;
-        }
-        .form-control, .form-select { 
-            background-color: #111516; 
-            border: 1px solid #3b4547; 
-            color: white; 
-            padding: 10px 12px;
-        }
-        .form-control:focus, .form-select:focus { 
-            background-color: #111516; 
-            color: white; 
-            border-color: #719999; 
-            box-shadow: none; 
-        }
-        .form-select option { 
-            background-color: #111516; 
-            color: white; 
-        }
-        .btn-cortai { 
-            background-color: #719999; 
-            color: #111516; 
-            font-weight: bold; 
-            border: none; 
-            width: 100%; 
-            padding: 12px; 
-            border-radius: 6px;
-            transition: 0.3s;
-        }
-        .btn-cortai:hover { 
-            background-color: #86aaaa; 
-            color: #111516;
-        }
-        .btn-voltar {
-            color: #8f9997;
-            border-color: #3b4547;
-            text-decoration: none;
-        }
-        .btn-voltar:hover {
-            color: #719999;
-            background-color: #191e1f;
-            border-color: #719999;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/cortai.css">
 </head>
 <body>
 
-<div class="container mb-3">
+<div class="container pagina">
     <div class="row justify-content-center">
-        <div class="col-md-7">
-            <a href="index.php" class="btn btn-voltar btn-sm">
-                <i class="bi bi-arrow-left me-1"></i> Voltar ao Início
-            </a>
-        </div>
-    </div>
-</div>
+        <div class="col-md-8 col-lg-7">
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-7">
-            <div class="card-agenda">
-                <h2 class="titulo">Agende seu <span>horário</span></h2>
-                <p class="boas-vindas">Olá, <strong><?= htmlspecialchars($nomeCliente); ?></strong>! Escolha os detalhes do seu atendimento.</p>
+            <div class="mb-3">
+                <a href="index.php?trocar=1" class="btn btn-voltar btn-sm">
+                    <i class="bi bi-person-x me-1"></i> Não sou <?= htmlspecialchars(explode(' ', $nomeCliente)[0]); ?>
+                </a>
+            </div>
 
-                <form action="salvar_agendamento.php" method="POST">
-                    
-                    <!-- SERVIÇO -->
+            <div class="card-cortai">
+                <h2 class="titulo text-center mb-1">Agende seu <span>horário</span></h2>
+                <p class="subtitulo text-center mb-4">
+                    Olá, <strong><?= htmlspecialchars($nomeCliente); ?></strong>! Escolha os detalhes do seu atendimento.
+                </p>
+
+                <?php if ($erro): ?>
+                    <div class="alert-cortai mb-4" role="alert"><?= htmlspecialchars($erro); ?></div>
+                <?php endif; ?>
+
+                <form action="salvar_agendamento.php" method="POST" id="form-agenda">
+
                     <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-scissors me-1"></i>Escolha o serviço</label>
-                        <select name="id_servico" class="form-select" required>
+                        <label class="form-label" for="id_servico"><i class="bi bi-scissors me-1"></i>Serviço</label>
+                        <select name="id_servico" id="id_servico" class="form-select" required>
                             <option value="">Selecione um serviço</option>
-                            <?php if ($resultadoServicos && $resultadoServicos->num_rows > 0): ?>
-                                <?php while ($servico = $resultadoServicos->fetch_assoc()): ?>
-                                    <option value="<?= $servico['id_servico']; ?>">
-                                        <?= htmlspecialchars($servico['nome']); ?> - R$ <?= number_format($servico['valor'], 2, ',', '.'); ?>
-                                    </option>
-                                <?php endwhile; ?>
-                            <?php endif; ?>
+                            <?php if ($servicos): while ($s = $servicos->fetch_assoc()): ?>
+                                <option value="<?= (int) $s['id_servico']; ?>">
+                                    <?= htmlspecialchars($s['nome']); ?> — R$ <?= number_format($s['valor'], 2, ',', '.'); ?> (<?= (int) $s['duracao']; ?> min)
+                                </option>
+                            <?php endwhile; endif; ?>
                         </select>
                     </div>
 
-                    <!-- BARBEIRO -->
                     <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-person-badge me-1"></i>Escolha o barbeiro</label>
-                        <select name="id_barbeiro" class="form-select" required>
-                            <option value="">Selecione um barbeiro</option>
-                            <?php if ($resultadoBarbeiros && $resultadoBarbeiros->num_rows > 0): ?>
-                                <?php while ($barbeiro = $resultadoBarbeiros->fetch_assoc()): ?>
-                                    <option value="<?= $barbeiro['id_barbeiro']; ?>">
-                                        <?= htmlspecialchars($barbeiro['nome']); ?>
-                                        <?php if (!empty($barbeiro['especialidade'])): ?>
-                                            (<?= htmlspecialchars($barbeiro['especialidade']); ?>)
-                                        <?php endif; ?>
-                                    </option>
-                                <?php endwhile; ?>
-                            <?php endif; ?>
+                        <label class="form-label" for="id_barbeiro"><i class="bi bi-person-badge me-1"></i>Barbeiro</label>
+                        <select name="id_barbeiro" id="id_barbeiro" class="form-select" required disabled>
+                            <option value="">Escolha o serviço primeiro</option>
                         </select>
                     </div>
 
-                    <!-- DATA -->
                     <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-calendar-event me-1"></i>Escolha a data</label>
-                        <input type="date" name="data_agendamento" class="form-control" min="<?= date('Y-m-d'); ?>" required>
+                        <label class="form-label" for="data_agendamento"><i class="bi bi-calendar-event me-1"></i>Data</label>
+                        <input type="date" name="data_agendamento" id="data_agendamento" class="form-control"
+                               min="<?= date('Y-m-d'); ?>" required>
                     </div>
 
-                    <!-- HORÁRIO -->
                     <div class="mb-4">
-                        <label class="form-label"><i class="bi bi-clock me-1"></i>Escolha o horário</label>
-                        <select name="horario" class="form-select" required>
-                            <option value="">Selecione um horário</option>
-                            <option value="09:00:00">09:00</option>
-                            <option value="10:00:00">10:00</option>
-                            <option value="11:00:00">11:00</option>
-                            <option value="12:00:00">12:00</option>
-                            <option value="13:00:00">13:00</option>
-                            <option value="14:00:00">14:00</option>
-                            <option value="15:00:00">15:00</option>
-                            <option value="16:00:00">16:00</option>
-                            <option value="17:00:00">17:00</option>
-                            <option value="18:00:00">18:00</option>
-                        </select>
+                        <span class="form-label d-block" id="rotulo-horario"><i class="bi bi-clock me-1"></i>Horário</span>
+                        <div id="horarios" class="slots" role="radiogroup" aria-labelledby="rotulo-horario"></div>
+                        <p id="horarios-aviso" class="slots-aviso" aria-live="polite">Escolha o serviço, o barbeiro e a data para ver os horários livres.</p>
                     </div>
 
-                    <button type="submit" class="btn btn-cortai">
+                    <button type="submit" class="btn btn-cortai w-100" id="btn-confirmar" disabled>
                         <i class="bi bi-check-lg me-1"></i> CONFIRMAR AGENDAMENTO
                     </button>
                 </form>
             </div>
+
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+    const $servico  = document.getElementById('id_servico');
+    const $barbeiro = document.getElementById('id_barbeiro');
+    const $data     = document.getElementById('data_agendamento');
+    const $slots    = document.getElementById('horarios');
+    const $aviso    = document.getElementById('horarios-aviso');
+    const $confirma = document.getElementById('btn-confirmar');
+
+    // Cada chamada ganha um número; respostas atrasadas de escolhas antigas são ignoradas.
+    let reqBarbeiros = 0, reqHorarios = 0;
+
+    async function buscar(url) {
+        const r = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+        if (r.status === 401) { window.location.href = 'index.php'; return null; }
+        const corpo = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(corpo.erro || 'Não foi possível carregar. Tente novamente.');
+        return corpo;
+    }
+
+    function limparHorarios(mensagem) {
+        $slots.replaceChildren();
+        $aviso.textContent = mensagem;
+        $aviso.hidden = false;
+        $confirma.disabled = true;
+    }
+
+    function resetarBarbeiros(texto) {
+        $barbeiro.replaceChildren(new Option(texto, ''));
+        $barbeiro.disabled = true;
+    }
+
+    async function carregarBarbeiros() {
+        const idServico = $servico.value;
+        const anterior  = $barbeiro.value;
+        const minha     = ++reqBarbeiros;
+
+        if (!idServico) {
+            resetarBarbeiros('Escolha o serviço primeiro');
+            limparHorarios('Escolha o serviço, o barbeiro e a data para ver os horários livres.');
+            return;
+        }
+
+        resetarBarbeiros('Carregando barbeiros...');
+        limparHorarios('Carregando...');
+
+        try {
+            const dados = await buscar('api_barbeiros.php?id_servico=' + encodeURIComponent(idServico));
+            if (!dados || minha !== reqBarbeiros) return;
+
+            if (dados.barbeiros.length === 0) {
+                resetarBarbeiros('Nenhum barbeiro disponível para este serviço');
+                limparHorarios('No momento nenhum barbeiro atende este serviço. Escolha outro serviço.');
+                return;
+            }
+
+            $barbeiro.replaceChildren(new Option('Selecione um barbeiro', ''));
+            dados.barbeiros.forEach(b => {
+                const texto = b.especialidade ? b.nome + ' (' + b.especialidade + ')' : b.nome;
+                $barbeiro.add(new Option(texto, b.id_barbeiro));
+            });
+            $barbeiro.disabled = false;
+
+            // Mantém o barbeiro já escolhido se ele também presta o novo serviço.
+            if ([...$barbeiro.options].some(o => o.value === anterior)) $barbeiro.value = anterior;
+
+            carregarHorarios();
+        } catch (e) {
+            resetarBarbeiros('Erro ao carregar');
+            limparHorarios(e.message);
+        }
+    }
+
+    async function carregarHorarios() {
+        const idServico = $servico.value, idBarbeiro = $barbeiro.value, data = $data.value;
+        const minha = ++reqHorarios;
+
+        if (!idServico || !idBarbeiro || !data) {
+            limparHorarios('Escolha o serviço, o barbeiro e a data para ver os horários livres.');
+            return;
+        }
+        limparHorarios('Buscando horários livres...');
+
+        try {
+            const qs = new URLSearchParams({ id_servico: idServico, id_barbeiro: idBarbeiro, data: data });
+            const dados = await buscar('api_horarios.php?' + qs);
+            if (!dados || minha !== reqHorarios) return;
+
+            $slots.replaceChildren();
+            if (dados.horarios.length === 0) {
+                limparHorarios('Sem horários livres neste dia. Tente outra data ou outro barbeiro.');
+                return;
+            }
+            $aviso.hidden = true;
+
+            dados.horarios.forEach((h, i) => {
+                const id = 'h' + i;
+                const wrap = document.createDocumentFragment();
+
+                const input = document.createElement('input');
+                input.type = 'radio'; input.name = 'horario'; input.value = h;
+                input.id = id; input.className = 'slot-input'; input.required = true;
+                input.addEventListener('change', () => { $confirma.disabled = false; });
+
+                const label = document.createElement('label');
+                label.htmlFor = id; label.className = 'slot'; label.textContent = h;
+
+                wrap.append(input, label);
+                $slots.append(wrap);
+            });
+        } catch (e) {
+            limparHorarios(e.message);
+        }
+    }
+
+    $servico.addEventListener('change', carregarBarbeiros);
+    $barbeiro.addEventListener('change', carregarHorarios);
+    $data.addEventListener('change', carregarHorarios);
+
+    // Navegador restaurou valores ao voltar para a página: recarrega as listas.
+    if ($servico.value) carregarBarbeiros();
+})();
+</script>
 </body>
 </html>
