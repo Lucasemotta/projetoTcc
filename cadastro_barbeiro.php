@@ -1,110 +1,35 @@
 <?php
 session_start();
+include "conexao.php";
 
-// (Opcional) Garante que apenas usuários logados acessem a página
+// Garante que apenas usuários logados acessem a página
 if (!isset($_SESSION['usuario_id'])) {
-    header("Location: login.php");
+    header("Location: index.php?tipo=barbeiro");
     exit;
 }
+
+// Serviços disponíveis para marcar quais o barbeiro realiza
+$servicos = $conn->query("SELECT id_servico, nome FROM servicos ORDER BY nome ASC");
 ?>
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-bs-theme="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cortaí - Cadastro Barbeiro</title>
+    <title>Cortaí - Cadastro de Barbeiro</title>
 
-    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <!-- Fonte Montserrat -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        body {
-            background-color: #111516;
-            color: white;
-            font-family: 'Montserrat', Arial, sans-serif;
-        }
-
-        .container {
-            margin-top: 50px;
-            margin-bottom: 50px;
-        }
-
-        .card-cadastro {
-            background-color: #191e1f;
-            border: 1px solid #303a3b;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-        }
-
-        .titulo {
-            text-align: center;
-            margin-bottom: 30px;
-            font-weight: 600;
-        }
-
-        .titulo span {
-            color: #719999;
-        }
-
-        .form-label {
-            color: #ddd;
-            font-size: 14px;
-        }
-
-        .form-control, .form-select {
-            background-color: #111516;
-            border: 1px solid #3b4547;
-            color: white;
-            padding: 10px 12px;
-        }
-
-        .form-control:focus, .form-select:focus {
-            background-color: #111516;
-            color: white;
-            border-color: #719999;
-            box-shadow: none;
-        }
-
-        .btn-cortai {
-            background-color: #719999;
-            color: #111516;
-            font-weight: bold;
-            border: none;
-            padding: 12px;
-            border-radius: 6px;
-            transition: 0.3s;
-        }
-
-        .btn-cortai:hover {
-            background-color: #86aaaa;
-            color: #111516;
-        }
-
-        .btn-voltar {
-            color: #8f9997;
-            border-color: #3b4547;
-            text-decoration: none;
-        }
-
-        .btn-voltar:hover {
-            color: #719999;
-            background-color: #191e1f;
-            border-color: #719999;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/cortai.css">
 </head>
 
 <body>
 
-    <div class="container mb-3">
+    <div class="container pagina pb-0">
         <div class="row justify-content-center">
-            <div class="col-md-6">
+            <div class="col-md-8 col-lg-6">
                 <a href="barbeiros.php" class="btn btn-voltar btn-sm">
                     <i class="bi bi-arrow-left me-1"></i> Voltar para a lista
                 </a>
@@ -112,18 +37,18 @@ if (!isset($_SESSION['usuario_id'])) {
         </div>
     </div>
 
-    <div class="container">
+    <div class="container pt-3 pb-5">
         <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card-cadastro">
+            <div class="col-md-8 col-lg-6">
+                <div class="card-cortai">
 
-                    <h2 class="titulo">
-                        Cadastro de <span>Barbeiro</span>
+                    <h2 class="titulo text-center mb-4">
+                        Cadastro de <span>barbeiro</span>
                     </h2>
 
                     <!-- Alerta de Sucesso após envio -->
                     <?php if (isset($_GET['sucesso'])): ?>
-                        <div class="alert alert-success text-center py-2 style='font-size: 14px;'" role="alert">
+                        <div class="alert alert-success text-center py-2" role="alert">
                             <i class="bi bi-check-circle me-1"></i> Barbeiro cadastrado com sucesso!
                         </div>
                     <?php endif; ?>
@@ -143,6 +68,22 @@ if (!isset($_SESSION['usuario_id'])) {
                         <div class="mb-3">
                             <label class="form-label">Especialidade</label>
                             <input type="text" name="especialidade" class="form-control" placeholder="Ex: Corte masculino, barba, navalhado">
+                        </div>
+
+                        <div class="mb-3">
+                            <span class="form-label d-block">Serviços que realiza</span>
+                            <?php if ($servicos && $servicos->num_rows > 0): ?>
+                                <?php while ($sv = $servicos->fetch_assoc()): ?>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="servicos[]"
+                                               value="<?= (int) $sv['id_servico']; ?>" id="sv<?= (int) $sv['id_servico']; ?>" checked>
+                                        <label class="form-check-label" for="sv<?= (int) $sv['id_servico']; ?>"><?= htmlspecialchars($sv['nome']); ?></label>
+                                    </div>
+                                <?php endwhile; ?>
+                                <div class="subtitulo mt-1">A agenda só mostra este barbeiro nos serviços marcados.</div>
+                            <?php else: ?>
+                                <div class="subtitulo">Cadastre um serviço primeiro (Painel &gt; Serviços).</div>
+                            <?php endif; ?>
                         </div>
 
                         <div class="mb-4">

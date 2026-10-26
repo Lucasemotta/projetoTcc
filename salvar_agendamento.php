@@ -1,85 +1,67 @@
 <?php
-session_start();
-include "conexao.php";
+require "agenda_lib.php";
+require "conexao.php";
 
-// Verifica se a requisição foi feita via POST
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     header("Location: agenda.php");
     exit;
 }
 
-// Recebe os dados da sessão e do formulário
-$id_cliente       = $_SESSION['id_cliente'] ?? null;
-$id_servico       = $_POST['id_servico'] ?? null;
-$id_barbeiro      = $_POST['id_barbeiro'] ?? null;
-$data_agendamento = $_POST['data_agendamento'] ?? null;
-$horario          = $_POST['horario'] ?? null;
+$idCliente  = exigir_cliente();
+$idServico  = filter_input(INPUT_POST, 'id_servico', FILTER_VALIDATE_INT);
+$idBarbeiro = filter_input(INPUT_POST, 'id_barbeiro', FILTER_VALIDATE_INT);
+$data       = (string) ($_POST['data_agendamento'] ?? '');
+$horario    = (string) ($_POST['horario'] ?? '');        // "HH:MM"
 
-// Se o cliente não estiver registrado na sessão, redireciona para o cadastro
-if (!$id_cliente) {
-    echo "<script>
-        alert('Sua sessão expirou ou o cliente não foi identificado. Por favor, cadastre-se novamente.');
-        window.location.href = 'cadastro_cliente.php';
-    </script>";
+function voltar_com_erro(string $mensagem): void
+{
+    agenda_flash($mensagem);
+    header("Location: agenda.php");
     exit;
 }
 
-// Validação dos campos obrigatórios
-if (!$id_servico || !$id_barbeiro || !$data_agendamento || !$horario) {
-    echo "<script>
-        alert('Por favor, preencha todos os campos do agendamento.');
-        window.location.href = 'agenda.php';
-    </script>";
-    exit;
+if (!$idServico || !$idBarbeiro || $data === '' || $horario === '') {
+    voltar_com_erro('Preencha serviço, barbeiro, data e horário para confirmar.');
+}
+if (!agenda_data_valida($data)) {
+    voltar_com_erro('Escolha uma data a partir de hoje.');
+}
+$servico = agenda_servico($conn, $idServico);
+if (!$servico || !barbeiro_presta_servico($conn, $idBarbeiro, $idServico)) {
+    voltar_com_erro('Este barbeiro não realiza o serviço escolhido.');
+}
+$duracao = (int) $servico['duracao'];
+
+// Bloqueia a linha do barbeiro enquanto confere e grava: dois clientes que clicam
+// no mesmo instante não conseguem reservar o mesmo horário.
+$conn->begin_transaction();
+try {
+    $lock = $conn->prepare("SELECT id_barbeiro FROM barbeiros WHERE id_barbeiro = ? FOR UPDATE");
+    $lock->bind_param("i", $idBarbeiro);
+    $lock->execute();
+    $lock->close();
+
+    if (!in_array($horario, horarios_livres($conn, $idBarbeiro, $data, $duracao), true)) {
+        $conn->rollback();
+        voltar_com_erro('Esse horário acabou de ser ocupado ou não está disponível. Escolha outro.');
+    }
+
+    $horarioSql = $horario . ':00';
+    $ins = $conn->prepare(
+        "INSERT INTO agendamentos (id_cliente, id_barbeiro, id_servico, data_agendamento, horario, status)
+         VALUES (?, ?, ?, ?, ?, 'Agendado')"
+    );
+    $ins->bind_param("iiiss", $idCliente, $idBarbeiro, $idServico, $data, $horarioSql);
+    $ins->execute();
+    $idAgendamento = $conn->insert_id;
+    $ins->close();
+
+    $conn->commit();
+} catch (Throwable $e) {
+    $conn->rollback();
+    error_log('Cortaí - erro ao salvar agendamento: ' . $e->getMessage());
+    voltar_com_erro('Não foi possível salvar seu agendamento agora. Tente novamente.');
 }
 
-// Impede agendamentos em datas retroativas
-$dataAtual = date('Y-m-d');
-$horaAtual = date('H:i:s');
-
-if ($data_agendamento < $dataAtual || ($data_agendamento === $dataAtual && $horario < $horaAtual)) {
-    echo "<script>
-        alert('Não é possível selecionar uma data ou horário que já passou.');
-        window.location.href = 'agenda.php';
-    </script>";
-    exit;
-}
-
-// Verifica se o barbeiro já possui agendamento no mesmo dia e horário
-$sqlVerifica = "SELECT id_agendamento FROM agendamentos 
-                WHERE id_barbeiro = ? AND data_agendamento = ? AND horario = ? AND status != 'Cancelado' 
-                LIMIT 1";
-
-$stmtVerifica = $conn->prepare($sqlVerifica);
-$stmtVerifica->bind_param("iss", $id_barbeiro, $data_agendamento, $horario);
-$stmtVerifica->execute();
-$resVerifica = $stmtVerifica->get_result();
-
-if ($resVerifica->num_rows > 0) {
-    echo "<script>
-        alert('Este horário já está ocupado para o barbeiro selecionado. Por favor, escolha outro horário.');
-        window.location.href = 'agenda.php';
-    </script>";
-    exit;
-}
-$stmtVerifica->close();
-
-// Insere o novo agendamento no banco de dados
-$sqlSalvar = "INSERT INTO agendamentos (id_cliente, id_barbeiro, id_servico, data_agendamento, horario, status) 
-              VALUES (?, ?, ?, ?, ?, 'Agendado')";
-
-$stmtSalvar = $conn->prepare($sqlSalvar);
-$stmtSalvar->bind_param("iiiss", $id_cliente, $id_barbeiro, $id_servico, $data_agendamento, $horario);
-
-if ($stmtSalvar->execute()) {
-    $id_agendamento = $conn->insert_id;
-    $stmtSalvar->close();
-    $conn->close();
-
-    // Redireciona para o comprovante/resumo do agendamento
-    header("Location: resumo.php?id=" . $id_agendamento);
-    exit;
-} else {
-    die("Erro ao salvar agendamento: " . $stmtSalvar->error);
-}
-?>
+header("Location: resumo.php?id=" . $idAgendamento);
+exit;
