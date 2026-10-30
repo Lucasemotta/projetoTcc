@@ -157,6 +157,76 @@ $totalFaturamento = 0;
             <div class="card-resumo-valor">
                 Total Previsto: <span>R$ <?= number_format($totalFaturamento, 2, ',', '.'); ?></span>
             </div>
+
+          <!-- Bloco de Disponibilidade + Almoço -->
+<div class="card bg-dark text-white p-4 mt-4 rounded">
+    <h4 class="mb-3">Definir Minha Disponibilidade & Almoço</h4>
+    <form action="salvar_horario.php" method="POST">
+        <div class="mb-3">
+            <label class="form-label">Dia da Semana:</label>
+            <select name="dia_semana" class="form-select bg-secondary text-white" required>
+                <option value="1">Segunda-feira</option>
+                <option value="2">Terça-feira</option>
+                <option value="3">Quarta-feira</option>
+                <option value="4">Quinta-feira</option>
+                <option value="5">Sexta-feira</option>
+                <option value="6">Sábado</option>
+                <option value="0">Domingo</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Horário Inicial (Abertura):</label>
+                <input type="time" name="horario_inicio" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Horário Final (Fecho):</label>
+                <input type="time" name="horario_fim" class="form-control" required>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Início do Almoço:</label>
+                <input type="time" name="almoco_inicio" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Fim do Almoço:</label>
+                <input type="time" name="almoco_fim" class="form-control">
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success w-100">Guardar Horário</button>
+    </form>
+</div>
+
+<!-- Bloco de Avisos / Fecho por Imprevisto -->
+<div class="card bg-dark text-white p-4 mt-4 rounded border border-warning">
+    <h4 class="text-warning mb-3">Aviso de Fecho / Imprevisto</h4>
+    <form action="salvar_aviso.php" method="POST">
+        <div class="mb-3">
+            <label class="form-label">Título do Aviso:</label>
+            <input type="text" name="titulo" class="form-control" placeholder="Ex: Encerrado por Motivo de Força Maior" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Mensagem para os Clientes:</label>
+            <textarea name="mensagem" class="form-control" rows="2" placeholder="Ex: Não haverá atendimento no dia de hoje devido a um imprevisto." required></textarea>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Início do Fecho:</label>
+                <input type="date" name="data_inicio" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Data Fim do Fecho:</label>
+                <input type="date" name="data_fim" class="form-control" required>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-warning w-100 fw-bold">Publicar Aviso de Fecho</button>
+    </form>
+</div>
+
         </div>
 
     </div>
