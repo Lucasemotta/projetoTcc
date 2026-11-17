@@ -1,0 +1,4 @@
+# Fotos enviadas pelas barbearias: nunca executar scripts aqui
+<FilesMatch "\.(php|phtml|phar)$">
+  Require all denied
+</FilesMatch>
